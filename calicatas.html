@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard Geotécnico - Calicatas</title>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/jquery.dataTables.min.css"/>
+  <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#f4f7fb;
+      --card:#ffffff;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --line:#dbe3ee;
+      --accent:#1f4e79;
+      --accent-2:#3b82f6;
+      --ok:#16a34a;
+      --warn:#f59e0b;
+      --bad:#dc2626;
+      --soft:#eef4fb;
+      --shadow:0 6px 18px rgba(31, 41, 55, 0.08);
+      --radius:14px;
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .container{
+      max-width: 1600px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header{
+      display:flex;
+      flex-wrap:wrap;
+      justify-content:space-between;
+      align-items:center;
+      gap:16px;
+      margin-bottom:20px;
+    }
+
+    .title-block h1{
+      margin:0;
+      font-size:28px;
+      color:var(--accent);
+    }
+
+    .title-block p{
+      margin:6px 0 0;
+      color:var(--muted);
+      font-size:14px;
+    }
+
+    .controls{
+      display:flex;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .control-card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 12px;
+      box-shadow:var(--shadow);
+    }
+
+    label{
+      font-size:12px;
+      color:var(--muted);
+      display:block;
+      margin-bottom:6px;
+      font-weight:600;
+    }
+
+    select, button{
+      padding:10px 12px;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#fff;
+      min-width:220px;
+      font-size:14px;
+    }
+
+    button{
+      min-width:auto;
+      cursor:pointer;
+      font-weight:600;
+      background:var(--accent);
+      color:#fff;
+      border:none;
+    }
+
+    button:hover{
+      opacity:.95;
+    }
+
+    .kpi-grid{
+      display:grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap:16px;
+      margin-bottom:22px;
+    }
+
+    .kpi{
+      background:var(--card);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      border:1px solid var(--line);
+      padding:18px;
+      min-height:110px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .kpi .label{
+      color:var(--muted);
+      font-size:13px;
+      margin-bottom:8px;
+      font-weight:600;
+    }
+
+    .kpi .value{
+      font-size:34px;
+      font-weight:700;
+      color:var(--accent);
+      line-height:1;
+      margin-bottom:6px;
+    }
+
+    .kpi .sub{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .section-title{
+      margin:10px 0 14px;
+      font-size:18px;
+      color:var(--accent);
+      font-weight:700;
+    }
+
+    .chart-grid{
+      display:grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap:18px;
+      margin-bottom:18px;
+    }
+
+    .chart-grid-3{
+      display:grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap:18px;
+      margin-bottom:18px;
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+    }
+
+    .card h3{
+      margin:0 0 14px;
+      font-size:16px;
+      color:var(--text);
+    }
+
+    .chart-wrap{
+      position:relative;
+      height:360px;
+    }
+
+    .chart-wrap.small{
+      height:300px;
+    }
+
+    .table-card{
+      background:var(--card);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:18px;
+      overflow:hidden;
+    }
+
+    table.dataTable thead th{
+      background:var(--soft);
+      color:var(--text);
+      font-weight:700;
+    }
+
+    .footnote{
+      margin-top:12px;
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    .status-pill{
+      display:inline-block;
+      padding:4px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:700;
+      color:#fff;
+    }
+
+    .status-culminado{ background:var(--ok); }
+    .status-pendiente{ background:var(--bad); }
+
+    .table-filters{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(180px, 1fr));
+      gap:12px;
+      margin-bottom:16px;
+      padding:14px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:var(--soft);
+    }
+
+    .filter-box label{
+      margin-bottom:5px;
+    }
+
+    .filter-box select{
+      width:100%;
+      min-width:unset;
+    }
+
+    .table-actions{
+      display:flex;
+      justify-content:flex-end;
+      margin-bottom:12px;
+    }
+
+    .table-actions button{
+      background:var(--accent);
+    }
+
+    @media (max-width: 1300px){
+      .kpi-grid{ grid-template-columns: repeat(3, 1fr); }
+      .chart-grid, .chart-grid-3{ grid-template-columns:1fr; }
+      .table-filters{ grid-template-columns: repeat(2, minmax(180px, 1fr)); }
+    }
+
+    @media (max-width: 760px){
+      .kpi-grid{ grid-template-columns: repeat(2, 1fr); }
+      select{ min-width:180px; }
+      .table-filters{ grid-template-columns:1fr; }
+    }
+
+    @media (max-width: 500px){
+      .kpi-grid{ grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+
+    <div class="header">
+      <div class="title-block">
+        <h1>Dashboard de Supervisión Geotécnica</h1>
+        <p>Control de calicatas conectado en tiempo real a Google Sheets · Hoja: <strong>Calicatas</strong></p>
+      </div>
+
+      <div class="controls">
+        <div class="control-card">
+          <label for="componentFilter">Filtrar por componente</label>
+          <select id="componentFilter">
+            <option value="TODOS">Todos los componentes</option>
+          </select>
+        </div>
+
+        <div class="control-card">
+          <label>&nbsp;</label>
+          <button id="resetBtn">Restablecer filtro</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="label">Total de calicatas</div>
+        <div class="value" id="kpiTotal">0</div>
+        <div class="sub">Registros filtrados</div>
+      </div>
+
+      <div class="kpi">
+        <div class="label">Total de rocas</div>
+        <div class="value" id="kpiRoca">0</div>
+        <div class="sub">¿Presenta Roca? = Sí</div>
+      </div>
+
+      <div class="kpi">
+        <div class="label">Total nivel freático</div>
+        <div class="value" id="kpiNF">0</div>
+        <div class="sub">¿Presenta Nivel Freático? = Sí</div>
+      </div>
+
+      <div class="kpi">
+        <div class="label">Total filtraciones</div>
+        <div class="value" id="kpiFiltracion">0</div>
+        <div class="sub">¿Presenta Filtración? = Sí</div>
+      </div>
+
+      <div class="kpi">
+        <div class="label">Densidades realizadas</div>
+        <div class="value" id="kpiDensidad">0</div>
+        <div class="sub">Ensayo Densidad = Aplica</div>
+      </div>
+
+      <div class="kpi">
+        <div class="label">Calicatas tapadas</div>
+        <div class="value" id="kpiTapada">0</div>
+        <div class="sub">Calicata tapada = Sí</div>
+      </div>
+    </div>
+
+    <div class="section-title">Visualización general</div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Dispersión XY de calicatas (Este UTM vs Norte UTM)</h3>
+        <div class="chart-wrap">
+          <canvas id="scatterChart"></canvas>
+        </div>
+        <div class="footnote">
+          Cada punto representa una calicata. El color distingue el estado para facilitar la supervisión rápida.
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Estado de ejecución</h3>
+        <div class="chart-wrap">
+          <canvas id="estadoChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid-3">
+      <div class="card">
+        <h3>Calicatas por componente</h3>
+        <div class="chart-wrap small">
+          <canvas id="componentChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Condiciones observadas</h3>
+        <div class="chart-wrap small">
+          <canvas id="condicionesChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Motivos de no aplicabilidad</h3>
+        <div class="chart-wrap small">
+          <canvas id="motivosChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid">
+      <div class="card">
+        <h3>Profundidad programada vs alcanzada por componente</h3>
+        <div class="chart-wrap">
+          <canvas id="profundidadChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Densidad aplicada vs no aplicada</h3>
+        <div class="chart-wrap">
+          <canvas id="densidadChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h3>Detalle operativo de calicatas</h3>
+
+      <div class="table-filters">
+        <div class="filter-box">
+          <label for="filterDensidad">Filtrar por densidad</label>
+          <select id="filterDensidad">
+            <option value="">Todos</option>
+            <option value="Aplica">Aplica</option>
+            <option value="No Aplica">No Aplica</option>
+          </select>
+        </div>
+
+        <div class="filter-box">
+          <label for="filterRoca">Filtrar por roca</label>
+          <select id="filterRoca">
+            <option value="">Todos</option>
+            <option value="Si">Sí</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="filter-box">
+          <label for="filterFiltracion">Filtrar por filtración</label>
+          <select id="filterFiltracion">
+            <option value="">Todos</option>
+            <option value="Si">Sí</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="filter-box">
+          <label for="filterNF">Filtrar por nivel freático</label>
+          <select id="filterNF">
+            <option value="">Todos</option>
+            <option value="Si">Sí</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="filter-box">
+          <label for="filterEstado">Filtrar por estado</label>
+          <select id="filterEstado">
+            <option value="">Todos</option>
+            <option value="Culminado">Culminado</option>
+            <option value="Pendiente">Pendiente</option>
+          </select>
+        </div>
+
+        <div class="filter-box">
+          <label for="filterTapada">Filtrar por calicata tapada</label>
+          <select id="filterTapada">
+            <option value="">Todos</option>
+            <option value="Si">Sí</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+
+        <div class="filter-box">
+          <label for="filterMuestra">Filtrar por extracción de muestra</label>
+          <select id="filterMuestra">
+            <option value="">Todos</option>
+            <option value="Si">Sí</option>
+            <option value="No">No</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="table-actions">
+        <button id="clearTableFilters">Limpiar filtros de tabla</button>
+      </div>
+
+      <table id="tablaCalicatas" class="display" style="width:100%">
+        <thead>
+          <tr>
+            <th>N°</th>
+            <th>Componente</th>
+            <th>Código</th>
+            <th>Este (UTM)</th>
+            <th>Norte (UTM)</th>
+            <th>Prof. Prog. (m)</th>
+            <th>Prof. Alc. (m)</th>
+            <th>Nivel Freático</th>
+            <th>Filtración</th>
+            <th>Roca</th>
+            <th>Tapada</th>
+            <th>Densidad</th>
+            <th>Motivo no aplicabilidad</th>
+            <th>Muestra</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <div class="footnote">
+        Fuente: Google Sheets público. El dashboard se alimenta directamente desde la hoja <strong>Calicatas</strong>.
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    const SHEET_CSV_URL =
+      "https://docs.google.com/spreadsheets/d/1RcEQEXC0KiKQKugjPE6gC9MjOu1GjlvjzUHL0LegLkw/export?format=csv&gid=0";
+
+    let rawData = [];
+    let filteredData = [];
+    let tableInstance = null;
+
+    let scatterChart, estadoChart, componentChart, condicionesChart, motivosChart, profundidadChart, densidadChart;
+
+    function toNumber(value) {
+      if (value === null || value === undefined || value === "") return null;
+      const raw = String(value).trim();
+      const normalized = raw.replace(",", ".");
+      const num = parseFloat(normalized);
+      return isNaN(num) ? null : num;
+    }
+
+    function cleanText(value) {
+      return (value ?? "").toString().trim();
+    }
+
+    function yes(value) {
+      return cleanText(value).toLowerCase() === "si";
+    }
+
+    function normalizeRow(r) {
+      return {
+        n: cleanText(r["N° Calicatas"]),
+        componente: cleanText(r["Componente"]),
+        codigo: cleanText(r["Código de Calicata"]),
+        este: toNumber(r["Este (UTM)"]),
+        norte: toNumber(r["Norte (UTM)"]),
+        profProg: toNumber(r["Prof. Programada (m)"]),
+        profAlc: toNumber(r["Prof. Alcanzada (m)"]),
+        profNF: toNumber(r["Prof. Nivel Freático (m)"]),
+        presentaNF: cleanText(r["¿Presenta Nivel Freático?"]),
+        presentaFiltracion: cleanText(r["¿Presenta Filtración?"]),
+        presentaRoca: cleanText(r["¿Presenta Roca?"]),
+        tapada: cleanText(r["Calicata tapada"]),
+        densidad: cleanText(r["Ensayo Densidad"]),
+        motivoNoAplica: cleanText(r["Motivo de no aplicabilidad"]),
+        extrajoMuestra: cleanText(r["¿Se extrajo muestra?"]),
+        cantidadMuestra: cleanText(r["Cantidad de Muestra extraída (kg)"]),
+        estado: cleanText(r["Estado"])
+      };
+    }
+
+    function destroyChart(chart) {
+      if (chart) chart.destroy();
+    }
+
+    function uniqueSorted(values) {
+      return [...new Set(values.filter(v => v))].sort((a, b) => a.localeCompare(b, "es"));
+    }
+
+    function countBy(data, keyFn) {
+      const out = {};
+      data.forEach(item => {
+        const key = keyFn(item);
+        out[key] = (out[key] || 0) + 1;
+      });
+      return out;
+    }
+
+    function average(arr) {
+      const valid = arr.filter(v => v !== null && !isNaN(v));
+      if (!valid.length) return 0;
+      return valid.reduce((a, b) => a + b, 0) / valid.length;
+    }
+
+    function updateKPIs(data) {
+      const total = data.length;
+      const roca = data.filter(d => yes(d.presentaRoca)).length;
+      const nf = data.filter(d => yes(d.presentaNF)).length;
+      const filtracion = data.filter(d => yes(d.presentaFiltracion)).length;
+      const densidad = data.filter(d => cleanText(d.densidad).toLowerCase() === "aplica").length;
+      const tapada = data.filter(d => yes(d.tapada)).length;
+
+      document.getElementById("kpiTotal").textContent = total;
+      document.getElementById("kpiRoca").textContent = roca;
+      document.getElementById("kpiNF").textContent = nf;
+      document.getElementById("kpiFiltracion").textContent = filtracion;
+      document.getElementById("kpiDensidad").textContent = densidad;
+      document.getElementById("kpiTapada").textContent = tapada;
+    }
+
+    function renderScatter(data) {
+      destroyChart(scatterChart);
+
+      const culminado = data
+        .filter(d => d.este !== null && d.norte !== null && d.estado.toLowerCase() === "culminado")
+        .map(d => ({ x: d.este, y: d.norte, codigo: d.codigo, componente: d.componente, estado: d.estado }));
+
+      const pendiente = data
+        .filter(d => d.este !== null && d.norte !== null && d.estado.toLowerCase() === "pendiente")
+        .map(d => ({ x: d.este, y: d.norte, codigo: d.codigo, componente: d.componente, estado: d.estado }));
+
+      scatterChart = new Chart(document.getElementById("scatterChart"), {
+        type: "scatter",
+        data: {
+          datasets: [
+            {
+              label: "Culminado",
+              data: culminado,
+              backgroundColor: "rgba(22, 163, 74, 0.75)",
+              pointRadius: 6,
+              pointHoverRadius: 8
+            },
+            {
+              label: "Pendiente",
+              data: pendiente,
+              backgroundColor: "rgba(220, 38, 38, 0.80)",
+              pointRadius: 6,
+              pointHoverRadius: 8
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "top" },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  const p = context.raw;
+                  return `${p.codigo} | ${p.componente} | Este: ${p.x} | Norte: ${p.y} | ${p.estado}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Este (UTM)" },
+              grid: { color: "#e5edf7" }
+            },
+            y: {
+              title: { display: true, text: "Norte (UTM)" },
+              grid: { color: "#e5edf7" }
+            }
+          }
+        }
+      });
+    }
+
+    function renderEstado(data) {
+      destroyChart(estadoChart);
+
+      const culminado = data.filter(d => d.estado.toLowerCase() === "culminado").length;
+      const pendiente = data.filter(d => d.estado.toLowerCase() === "pendiente").length;
+
+      estadoChart = new Chart(document.getElementById("estadoChart"), {
+        type: "doughnut",
+        data: {
+          labels: ["Culminado", "Pendiente"],
+          datasets: [{
+            data: [culminado, pendiente],
+            backgroundColor: [
+              "rgba(22, 163, 74, 0.85)",
+              "rgba(220, 38, 38, 0.85)"
+            ],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" }
+          }
+        }
+      });
+    }
+
+    function renderComponentes(data) {
+      destroyChart(componentChart);
+
+      const counts = countBy(data, d => d.componente);
+      const labels = Object.keys(counts);
+      const values = Object.values(counts);
+
+      componentChart = new Chart(document.getElementById("componentChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "N° de calicatas",
+            data: values,
+            backgroundColor: "rgba(31, 78, 121, 0.85)"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { color: "#e5edf7" } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderCondiciones(data) {
+      destroyChart(condicionesChart);
+
+      const roca = data.filter(d => yes(d.presentaRoca)).length;
+      const nf = data.filter(d => yes(d.presentaNF)).length;
+      const filtracion = data.filter(d => yes(d.presentaFiltracion)).length;
+      const tapada = data.filter(d => yes(d.tapada)).length;
+
+      condicionesChart = new Chart(document.getElementById("condicionesChart"), {
+        type: "bar",
+        data: {
+          labels: ["Roca", "Nivel freático", "Filtración", "Tapada"],
+          datasets: [{
+            label: "Cantidad",
+            data: [roca, nf, filtracion, tapada],
+            backgroundColor: [
+              "rgba(55, 65, 81, 0.85)",
+              "rgba(59, 130, 246, 0.85)",
+              "rgba(245, 158, 11, 0.85)",
+              "rgba(16, 185, 129, 0.85)"
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: { beginAtZero: true, grid: { color: "#e5edf7" } },
+            x: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderMotivos(data) {
+      destroyChart(motivosChart);
+
+      const valid = data.filter(d =>
+        d.motivoNoAplica &&
+        d.motivoNoAplica.toLowerCase() !== "ninguna"
+      );
+
+      const counts = countBy(valid, d => d.motivoNoAplica);
+      const labels = Object.keys(counts);
+      const values = Object.values(counts);
+
+      motivosChart = new Chart(document.getElementById("motivosChart"), {
+        type: "bar",
+        data: {
+          labels,
+          datasets: [{
+            label: "Frecuencia",
+            data: values,
+            backgroundColor: "rgba(244, 114, 182, 0.80)"
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: "y",
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { color: "#e5edf7" } },
+            y: { grid: { display: false } }
+          }
+        }
+      });
+    }
+
+    function renderProfundidad(data) {
+      destroyChart(profundidadChart);
+
+      const componentes = uniqueSorted(data.map(d => d.componente));
+
+      const promProg = componentes.map(c => {
+        const arr = data.filter(d => d.componente === c).map(d => d.profProg);
+        return average(arr).toFixed(2);
+      });
+
+      const promAlc = componentes.map(c => {
+        const arr = data.filter(d => d.componente === c).map(d => d.profAlc);
+        return average(arr).toFixed(2);
+      });
+
+      profundidadChart = new Chart(document.getElementById("profundidadChart"), {
+        type: "bar",
+        data: {
+          labels: componentes,
+          datasets: [
+            {
+              label: "Prof. Programada promedio (m)",
+              data: promProg,
+              backgroundColor: "rgba(59, 130, 246, 0.80)"
+            },
+            {
+              label: "Prof. Alcanzada promedio (m)",
+              data: promAlc,
+              backgroundColor: "rgba(31, 78, 121, 0.85)"
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "top" }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              grid: { color: "#e5edf7" },
+              title: { display: true, text: "Profundidad (m)" }
+            },
+            x: {
+              grid: { display: false }
+            }
+          }
+        }
+      });
+    }
+
+    function renderDensidad(data) {
+      destroyChart(densidadChart);
+
+      const aplica = data.filter(d => d.densidad.toLowerCase() === "aplica").length;
+      const noAplica = data.filter(d => d.densidad.toLowerCase() === "no aplica").length;
+
+      densidadChart = new Chart(document.getElementById("densidadChart"), {
+        type: "pie",
+        data: {
+          labels: ["Aplica", "No aplica"],
+          datasets: [{
+            data: [aplica, noAplica],
+            backgroundColor: [
+              "rgba(22, 163, 74, 0.85)",
+              "rgba(245, 158, 11, 0.85)"
+            ]
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" }
+          }
+        }
+      });
+    }
+
+    function renderTable(data) {
+      if (tableInstance) {
+        tableInstance.clear().destroy();
+        $("#tablaCalicatas tbody").empty();
+      }
+
+      data.forEach(d => {
+        const estadoClass = d.estado.toLowerCase() === "culminado" ? "status-culminado" : "status-pendiente";
+        $("#tablaCalicatas tbody").append(`
+          <tr>
+            <td>${d.n}</td>
+            <td>${d.componente}</td>
+            <td>${d.codigo}</td>
+            <td>${d.este ?? ""}</td>
+            <td>${d.norte ?? ""}</td>
+            <td>${d.profProg ?? ""}</td>
+            <td>${d.profAlc ?? ""}</td>
+            <td>${d.presentaNF}</td>
+            <td>${d.presentaFiltracion}</td>
+            <td>${d.presentaRoca}</td>
+            <td>${d.tapada}</td>
+            <td>${d.densidad}</td>
+            <td>${d.motivoNoAplica}</td>
+            <td>${d.extrajoMuestra}</td>
+            <td><span class="status-pill ${estadoClass}">${d.estado}</span></td>
+          </tr>
+        `);
+      });
+
+      tableInstance = $("#tablaCalicatas").DataTable({
+        pageLength: 10,
+        order: [[0, "asc"]],
+        language: {
+          search: "Buscar:",
+          lengthMenu: "Mostrar _MENU_ registros",
+          info: "Mostrando _START_ a _END_ de _TOTAL_ registros",
+          paginate: {
+            first: "Primero",
+            last: "Último",
+            next: "Siguiente",
+            previous: "Anterior"
+          },
+          zeroRecords: "No se encontraron registros",
+          infoEmpty: "Sin registros disponibles",
+          infoFiltered: "(filtrado de _MAX_ registros totales)"
+        }
+      });
+
+      bindTableFilters();
+    }
+
+    function bindTableFilters() {
+      const filters = [
+        { id: "filterNF", col: 7 },
+        { id: "filterFiltracion", col: 8 },
+        { id: "filterRoca", col: 9 },
+        { id: "filterTapada", col: 10 },
+        { id: "filterDensidad", col: 11 },
+        { id: "filterMuestra", col: 13 },
+        { id: "filterEstado", col: 14 }
+      ];
+
+      filters.forEach(f => {
+        const el = document.getElementById(f.id);
+        el.onchange = function() {
+          let val = this.value;
+          if (f.id === "filterEstado" && val) {
+            tableInstance.column(f.col).search(val, true, false).draw();
+          } else {
+            tableInstance.column(f.col).search(val ? '^' + val + '$' : '', true, false).draw();
+          }
+        };
+      });
+
+      document.getElementById("clearTableFilters").onclick = function() {
+        filters.forEach(f => document.getElementById(f.id).value = "");
+        tableInstance.columns().search('').draw();
+      };
+    }
+
+    function updateDashboard() {
+      const selectedComponent = document.getElementById("componentFilter").value;
+
+      filteredData = selectedComponent === "TODOS"
+        ? [...rawData]
+        : rawData.filter(d => d.componente === selectedComponent);
+
+      updateKPIs(filteredData);
+      renderScatter(filteredData);
+      renderEstado(filteredData);
+      renderComponentes(filteredData);
+      renderCondiciones(filteredData);
+      renderMotivos(filteredData);
+      renderProfundidad(filteredData);
+      renderDensidad(filteredData);
+      renderTable(filteredData);
+    }
+
+    function loadFilterOptions(data) {
+      const components = uniqueSorted(data.map(d => d.componente));
+      const select = document.getElementById("componentFilter");
+      select.innerHTML = `<option value="TODOS">Todos los componentes</option>`;
+
+      components.forEach(c => {
+        const option = document.createElement("option");
+        option.value = c;
+        option.textContent = c;
+        select.appendChild(option);
+      });
+    }
+
+    function loadData() {
+      Papa.parse(SHEET_CSV_URL, {
+        download: true,
+        header: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          rawData = results.data
+            .map(normalizeRow)
+            .filter(d => d.n && d.codigo);
+
+          loadFilterOptions(rawData);
+          updateDashboard();
+        },
+        error: function(err) {
+          console.error("Error al cargar la hoja:", err);
+          alert("No se pudo cargar la hoja de Google Sheets. Verifica que esté compartida públicamente y publicada en la web.");
+        }
+      });
+    }
+
+    document.getElementById("componentFilter").addEventListener("change", updateDashboard);
+
+    document.getElementById("resetBtn").addEventListener("click", () => {
+      document.getElementById("componentFilter").value = "TODOS";
+      updateDashboard();
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
